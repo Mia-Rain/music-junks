@@ -40,4 +40,7 @@ general hints
 -- everything requires curl
 -- something may require jq
 ---- however I make many attempts to prevent it
+-- I recommend using zsh over bash/dash as zsh is much faster
+---- scripts found here should avoid using IFS to prevent compat issues
+---- unless otherwise stated, thus zsh compatibly should be fine
 ---

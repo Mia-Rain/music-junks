@@ -8,50 +8,54 @@
 # a TON of looping is being done to parse everything, and it is REALLY slow
 
 # first get the length of the list
-nl="
-"
-RETURN=$(curl -X "GET" "https://api.spotify.com/v1/me/tracks" -H "Accept: application/json" -H "Content-Type: application/json" -H "Authorization: Bearer $AUTHKEY" -s)
-[ "${RETURN#*expired}" != "$RETURN" ] && {
-  printf '%s\n' "Your token may have expired..."
+RETURN=$(
+R=$(curl -X "GET" "https://api.spotify.com/v1/me/tracks" -H "Accept: application/json" -H "Content-Type: application/json" -H "Authorization: Bearer $AUTHKEY" -s --fail-with-body)
+[ "$?" != 0 ] && {
+  echo "FAILED"
+} || printf '%s\n' "$R"
+)
+[ "$RETURN" = "FAILED" ] && {
+  echo "AUTHKEY may be invaild, expired, or unset, or other connection errors are occuring..."
   exit 1
 }
 length="${RETURN##*?total????}"; length="${length%??}" # ?? should remove closing } and NL
 offset=0
 TRACK_NUM=1
-unset RETURN
 until [ $offset -ge $length ]; do
-  RETURN="${RETURN+$RETURN$nl}$(curl -sL -X "GET" -H "Accept: application/json" -H "Content-Type: application/json" -H "Authorization: Bearer $AUTHKEY" "https://api.spotify.com/v1/me/tracks?limit=50&offset=${offset}")"
-  : $((offset+=50))
-done
-echo "---"
-TRACK_NUM=1; until [ $TRACK_NUM -ge $length ]; do
-  RETURN="${RETURN#*?track????\{}" # remove all data before track element
-  # handle the album as it appears first
-  RETURN="${RETURN#*?\],}" # remove all data within the album artists array
-  RETURN="${RETURN#*?id\"????}" # remove all data before the album id
-  ALBUM_ID="${RETURN%%?,*}"
-  RETURN="${RETURN#*\],}" # remove all data before and in the images array
-  ALBUM_NAME="${RETURN#*?name?????}"; ALBUM_NAME="${ALBUM_NAME%%?,*}"
-  # above is all for album data, next is the list of artists for the current track
-  # artists are held in an array, we only need each name
-  # trying to decide when the array ends is complex
-  RETURN="${RETURN#*\},?}"; unset ARTISTS # move to artist block
-  until [ "$p" = "]," ]; do
-    RETURN="${RETURN#*?name?????}" # remove everything before the name data
-    ARTISTS="${ARTISTS+$ARTISTS }${RETURN%%?,*}"; # store name data
-    RETURN="${RETURN#*\}?}";
-    read -r p << EOF
+  RETURN=$(curl -sL -X "GET" -H "Accept: application/json" -H "Content-Type: application/json" -H "Authorization: Bearer $AUTHKEY" "https://api.spotify.com/v1/me/tracks?limit=50&offset=${offset}")
+  track_num=1; until [ $track_num -ge 50 ]; do
+    RETURN="${RETURN#*?track????\{}" # remove all data before track element
+    # handle the album as it appears first
+    RETURN="${RETURN#*?\],}" # remove all data within the album artists array
+    RETURN="${RETURN#*?id\"????}" # remove all data before the album id
+    ALBUM_ID="${RETURN%%?,*}"
+    RETURN="${RETURN#*\],}" # remove all data before and in the images array
+    ALBUM_NAME="${RETURN#*?name?????}"; ALBUM_NAME="${ALBUM_NAME%%?,*}"
+    # above is all for album data, next is the list of artists for the current track
+    # artists are held in an array, we only need each name
+    # trying to decide when the array ends is complex
+    RETURN="${RETURN#*\},?}"; unset ARTISTS # move to artist block
+    until [ "$p" = "]," ]; do
+      RETURN="${RETURN#*?name?????}" # remove everything before the name data
+      ARTISTS="${ARTISTS+$ARTISTS }${RETURN%%?,*}"; # store name data
+      RETURN="${RETURN#*\}?}";
+      read -r p << EOF
 $RETURN
 EOF
-    # set p; if p is exactly "]," until loop will end
+      # set p; if p is exactly "]," until loop will end
+      #exit
+    done
+    unset p
+    # until the current line matches the end of an array, do the above
+    RETURN="${RETURN#*?id\"????}"; TRACK_ID="${RETURN%%?,*}" # get track id
+    RETURN="${RETURN#*?name?????}" # move to track name
+    TRACK_NAME="${RETURN%%?,*}"
+    printf 'Track #%s: %s - %s | Album: %s - %s | Artists: %s\n' "$TRACK_NUM" "$TRACK_NAME" "$TRACK_ID" "$ALBUM_NAME" "$ALBUM_ID" "$ARTISTS"
+    RETURN="${RETURN#*\},?\{}" # finish current track
+    : $((track_num+=1))
+    : $((TRACK_NUM+=1))
   done
-  unset p
-  # until the current line matches the end of an array, do the above
-  RETURN="${RETURN#*?id\"????}"; TRACK_ID="${RETURN%%?,*}" # get track id
-  RETURN="${RETURN#*?name?????}" # move to track name
-  TRACK_NAME="${RETURN%%?,*}"
-  printf 'Track #%s: %s - %s | Album: %s - %s | Artists: %s\n' "$TRACK_NUM" "$TRACK_NAME" "$TRACK_ID" "$ALBUM_NAME" "$ALBUM_ID" "$ARTISTS"
-  RETURN="${RETURN#*\},?\{}" # finish current track
-  : $((TRACK_NUM+=1))
+  # until 50th track
+  : $((offset+=50))
 done
 exit
