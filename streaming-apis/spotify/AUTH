@@ -1,0 +1,23 @@
+#!/bin/sh
+IFS=""; eval $(cat) 
+# eval STDIN - allows for authkeys to be passed via STDIN 
+# requires that REKEY,CLID and CLSEC be passed via STDIN
+[ "$REKEY" -a "$CLID" -a "$CLSEC" ] || for i in ./authkeys "${0%/*}/authkeys" "${XDG_CACHE_HOME:-$HOME/.cache/}/spotbash/authkeys"; do # only run loop all variables for AUTHKEY are unset
+  [ -e $i -a ! "$REKEY" ] && . ${i}
+done # much cleaner then old method
+
+RETURN=$(curl -X POST -d grant_type=refresh_token -d refresh_token="$REKEY" -d client_id="$CLID" -d client_secret="$CLSEC" https://accounts.spotify.com/api/token -s)
+AUTHKEY="${RETURN%%?,?*}"; AUTHKEY="${AUTHKEY#??access_token???}"
+SCOPES="${RETURN##*?scope?:}"; SCOPES="${SCOPES%\}}"
+EXP="${RETURN##*?expires_in?:}"; EXP="${EXP%%,*}"
+echo "export AUTHKEY=$AUTHKEY"
+echo "export SCOPES=$SCOPES"
+# SCOPES is never directly used; execept in ./scopes
+# mostly for user reference
+echo "export EXPIRES=$EXP"
+# typically expires in 1h
+# the returned vaule is in seconds; 3600 is typical, 3600/60/60 is 1
+# users can typically disregard EXPIRES, and nothing here should make use of it
+echo "export MARKET=${MARKET:-US}" 
+# users can manually set the market by exporting $MARKET to another value
+# this can sometimes side-step licensing issues

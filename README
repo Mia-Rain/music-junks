@@ -1,0 +1,12 @@
+---
+music-junks
+-- random junk for music management
+---- streaming apis, collection scripts, discovery tools, etc
+---
+
+---
+licensing
+-- most code here is licensed under MIT/Unlicense, and is part of the public domain
+---- however some code cannot be legally released under such due to DMCA restrictions
+  >> notably qobuz is against OSS; no actual key/token data is stored here however
+---

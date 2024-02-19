@@ -1,0 +1,25 @@
+#!/bin/sh
+# searches for music in $1
+##
+# various testing with ytmdl shows that using "topic" may supply better results
+# use $2 to change the suffix from "topic" to other options like "offical audio"
+# use $3 to literally give the url
+##
+# spotbash searches for $1 and yanks the id
+# use $4 for given id
+
+[ ! "$2" ] && set -- "$1" "topic"
+[ "$2" != "topic" ] && set -- "$1" "official audio" "${3}" "${4}" 
+
+track_info="$(spotbash search_track "$1" | head -n1)"
+name="${track_info%% By:*}"
+artist="${track_info%% @ spotify:track:*}"; artist="${artist##* By: }"
+id="${track_info##* @ spotify:track:}"
+[ "$4" ] && id="${4}"
+[ "$id" ] || exit 1
+echo "FOUND INFO: $track_info"
+echo "ARGUMENTS GIVEN: $@"
+[ "$3" ] || set -- "$1" "$2"
+cmd="ytmdl --format mp3 --spotify-id $id \"$name by $artist ${2:-topic}\" ${3+--url $3}"
+echo "YTMDL CMD: $cmd"
+sh -c "$cmd"

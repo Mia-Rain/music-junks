@@ -1,0 +1,38 @@
+---
+qobuz api
+---
+
+---
+auth
+-- qobuz authentication is slightly complex as they no longer allow open source api usage
+-- however, we can just flat-out ignore this
+---- as it is possible to pull the required tokens from the web player
+  >> devs/users will need to reference existing code to write new tools
+  >> this is no proper arcive of the api documentaion
+---
+
+---
+auth process
+-- first pull the app_id from the bundle.js @ play.qobuz.com/resources/${VERSION}/bundle.js
+  >> the bundle.js version is likely to change, the version ATTOW is 7.1.3-b011
+  >>>> while the version will change, it seems like the methods do not
+  >>>> these steps were taken from code using version 7.0.1-b018 and still work
+---- there are several app_ids, one for each of production, integration, recette, and nightly 
+  >> users/devs will simply have to try each one
+  >>>> the matching app_secret for the nightly app_id is missing
+---- match all the app_ids with `<APP_ID-TYPE>:{api:{appId:"<APP_ID>",`
+  >> where <APP_ID-TYPE> is which app_id to grab; and APP_ID is the app_id
+  >>>> please note that the appSecrets with them are actually invaild
+-- next descramble and (optionally) decode the app_secret for your chosen app_id
+  >> note that only select endpoints require the app_secret
+---- combine <SEED>, <INFO>, <EXTRA>, remove the last 44 chars, then optionally decode from base64
+  >> users/devs should chose to decode as it provides confirmation that the secret was formed properly
+------ <SEED>
+    >> match with `"<APP_ID-TYPE>"===e?d.initialSeed("<SEED>",window.utimezone.<TIMEZONE>`
+    >> the final unnamed seed can be matched with `):d.initialSeed("<SEED>",window.utimezone.<TIMEZONE>`
+    >>>> the unnamed is likely production
+------ <INFO> & <EXTRA>
+    >> match using the above <TIMEZONE> with `<TIMEZONE>",info:"<INFO>",extras:"<EXTRA>"}`
+    >>>> note that <TIMEZONE> is listed in a different format and case system
+    >>>> ie algier becomes Africa/Algiers; london to Europe/London; etc
+---

@@ -1,0 +1,23 @@
+---
+music-scripts
+-- music collection and playlist building scripts
+---
+
+---
+deps
+-- ytmdl, mediainfo, spotbash
+---
+
+---
+info
+-- these scripts make use of ytmdl, and my previous project spotbash
+---- spotbash is deprecated but nothing with the same features exists to my knowledge
+---- while the code is horrbile, it works very well unless spotify rate limits the user
+---
+
+---
+issues
+-- many issues come from using youtube as the provider
+---- I do /NOT/ recommend using this, or any youtube downloader
+---- unless you want to follow DMCA laws, or the content is not found elsewhere
+  >> there are better options using streaming services with much higher quality

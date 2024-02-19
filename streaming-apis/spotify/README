@@ -1,0 +1,43 @@
+---
+spotify api
+-- random ass scripts for the spotify api
+---
+
+---
+Spotbash
+-- this is generally a replacement for Spotbash
+-- while spotbash works, the code is stale, and complex
+-- here everything should be well separated
+-- scripts have comments describing their usage
+---
+
+---
+auth
+-- most things will require an authkeys file
+-- this can be generated with REKEY @ mia-rain.github.io/REKEY
+  >>>> sadly a web hosted project is required
+  >>>> this could be done locally with some index.html files and junk
+  >>>> or with nodejs but the above is the fine normally
+---- the above will ask for tokens from a project @ developer.spotify.com
+  >> additionally you will need to set the redirect uri to 
+  >> https://mia-rain.github.io/REKEY/callback
+  >>>> reload and retry if no output is displayed, also allow some time for Spotify to respond
+-- see ./AUTH and ./authkeys.example
+---- they contain info how to produce an `$AUTHKEY` var and what an authkeys file should look like
+  >> at the current moment no system exists to refresh the key after a given time
+  >> the time is likely always the same but one would need to have a timestamp with the key
+  >> and ask `date(1)` constantly for the current timestamp; which is complex and annoying
+  >>>> however do note that Spotify does and will rate-limit free accounts
+  >>>>>> nothing here requires a premium account
+  >>>>>> only the player sdk "requires" a premium account
+---
+
+---
+general hints
+-- almost everything will need AUTHKEY to be exported
+-- scripts have info about the required scopes
+-- scripts will only make references to others in comments
+-- everything requires curl
+-- something may require jq
+---- however I make many attempts to prevent it
+---

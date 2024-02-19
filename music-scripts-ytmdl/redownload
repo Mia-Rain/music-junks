@@ -1,0 +1,13 @@
+#!/bin/sh
+# uses mediainfo from a file to redownload incase the audio data is wrong
+# basically calls ytmdl with metadata from the file
+# just flatout talks to mgrab
+## $1 should be a actual file for mediainfo to parse
+# give $2 as custom suffix with $3 as url
+# and $4 as id
+
+name="$(mediainfo $1 | grep "Track name " | cut -d':' -f2)"; name="${name# }"
+artist="$(mediainfo $1 | grep "Performer " | cut -d':' -f2)"; artist="${artist# }"
+echo "info: name - $name | artist - $artist | cmd: mgrab '$name by $artist' $2 $3 $4"
+mgrab "$name $artist" "${2}" "${3}" "$4" # using "by $artist" here as issues caused by spotifys search algo
+echo "you should move the new file to $1"
