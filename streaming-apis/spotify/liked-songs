@@ -37,7 +37,7 @@ until [ $offset -ge $length ]; do
     RETURN="${RETURN#*\},?}"; unset ARTISTS # move to artist block
     until [ "$p" = "]," ]; do
       RETURN="${RETURN#*?name?????}" # remove everything before the name data
-      ARTISTS="${ARTISTS+$ARTISTS }${RETURN%%?,*}"; # store name data
+      ARTISTS="${ARTISTS+${ARTISTS}, }${RETURN%%?,*}"; # store name data
       RETURN="${RETURN#*\}?}";
       read -r p << EOF
 $RETURN
