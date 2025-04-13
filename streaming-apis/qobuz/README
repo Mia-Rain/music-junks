@@ -3,12 +3,21 @@ qobuz api
 ---
 
 ---
+foot note
+-- qobuz is really only good for taking high quality rips
+  >> many entire artists, or songs are missing
+---- qobuz offers 24bit/16bit flacs
+  >> deezer offers only 16bit
+  >> tidal offering is unknown as cannot view without paid account
+---
+
+---
 auth
 -- qobuz authentication is slightly complex as they no longer allow open source api usage
 -- however, we can just flat-out ignore this
 ---- as it is possible to pull the required tokens from the web player
   >> devs/users will need to reference existing code to write new tools
-  >> this is no proper arcive of the api documentaion
+  >> there is no proper archive of the api documentation
 ---
 
 ---

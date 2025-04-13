@@ -1,0 +1,159 @@
+#!/bin/sh
+# shellcheck disable=2250
+# shellcheck disable=2016
+indent="  "
+####
+####
+# Docs
+### 
+# this code is originally ripped from spotbash
+# then rewritten for our db standard and to avoid use of jq 
+####
+####
+
+help() {
+  printf 'playlist: playlist subcommands
+---
+[get] - raw playlist data -- for snapshot_id
+[list|ls] - list playlists
+[show|list|ls] - lists all songs in $2 || requires $2 
+[add] - add track to $2
+[del] - remove track from $2 with $3 for snapshot_id
+'
+# [del] - delete playlist $2 || if $3 is unset # add double check
+# [create|make] - create new playlist with name $2
+# TODO ^
+}
+# shellcheck disable=2154
+length() {
+  out="$(curl -X "GET" "https://api.spotify.com/v1/playlists/$1/tracks?market=US" -H "Accept: application/json" -H "Content-Type: application/json" -H "Authorization: Bearer $AUTHKEY" -s)"
+  out="${out##*?total?:}"; out="${out%\}}"
+  [ ! "$out" -eq "$out" ] 2>/dev/null && return 1
+  printf '%s\n' "$out"
+}
+playlists(){
+  #curl -s -X GET "https://api.spotify.com/v1/me/playlists" -H 'Accept: application/json' -H 'Content-Type: application/json' -H "Authorization: Bearer $AUTHKEY" | jq '.items[] | .name,.uri' -r
+  lists="$(curl -s -X GET "https://api.spotify.com/v1/me/playlists" -H 'Accept: application/json' -H 'Content-Type: application/json' -H "Authorization: Bearer $AUTHKEY")"
+  
+  total_playlists="${lists#*?total?:}"; total_playlists="${total_playlists%%,?items?:?*}"
+  [ "$total_playlists" -eq "$total_playlists" ] 2>/dev/null || return 1
+
+
+  printf 'playlists() {\n'
+  # can use "${lists#*?collaborative?:}" to jump to next item
+
+    printf '%s construct cat titles 1 %s\n' "$indent" "$total_playlists"
+    printf '%s construct cat ids 2 %s\n' "$indent" "$total_playlists"
+    printf '%s construct cat urls 3 %s\n' "$indent" "$total_playlists"
+    # TODO: playlist art is in another array
+    printf '%s construct cat scope 4 %s\n' "$indent" "$total_playlists"
+    printf '%s construct cat snapshot_id 5 %s\n' "$indent" "$total_playlists" 
+    # setup construct cats
+    # use __sel to select cats
+    
+    ## for each playlist
+    item_playlist="${lists#*?collaborative?:}"; item_playlist="${item_playlist%%,?type?:?playlist?,?uri?:*}"
+    lists="${lists#*"$item_playlist"}"
+    ##
+    
+    item_counter=1
+    [ "$item_counter" -le "${total_playlists}" ] || exit 1
+    until [ "${item_counter}" -ge $((total_playlists+1)) ]; do
+
+      [ -n "$DEBUG" ] && (
+        echo "$lists"
+      ) >&2
+      ## debug
+
+      # url = external url
+      # id = id
+      # title = name
+      # snapshot_id = snapshot_id
+      # scope = public (boolean)
+      item_url="${item_playlist#*?external_urls?:??spotify?:?}"; item_url="${item_url%%??,?href?:?*}"
+      # ^ "external_urls":{"spotify":" -- followed by href
+      item_id="${item_playlist#*??id?:?}"; item_id="${item_id%%?,?images?:?*}"
+      # ^ ,"id":" -- followed by images array
+      item_title="${item_playlist#*?,?name?:?}"; item_title="${item_title%%?,?owner?:?*}"
+      # ^ ],"name":" -- followed by owner
+      item_scope="${item_playlist#*,?public?:}"; item_scope="${item_scope%%,?snapshot_id?:?*}"
+      if [ "$item_scope" = "true" ]; then
+        item_scope="public"
+      else
+        item_scope="private"
+      fi 
+      # ^ ,"public": -- followed by snapshot_id
+      item_snapshot_id="${item_playlist#*,?snapshot_id?:?}"; item_snapshot_id="${item_snapshot_id%%?,?tracks?:?*}"
+      # ^ ,"snapshot_id":" -- followed by tracks
+      printf '%s construct cat __sel 1\n' "$indent"
+      printf '%s construct item %s "%s"\n' "$indent" "$item_counter" "$item_title"
+      printf '%s construct cat __sel 2\n' "$indent"
+      printf '%s construct item %s "%s"\n' "$indent" "$item_counter" "$item_id"
+      printf '%s construct cat __sel 3\n' "$indent"
+      printf '%s construct item %s "%s"\n' "$indent" "$item_counter" "$item_url"
+      printf '%s construct cat __sel 4\n' "$indent"
+      printf '%s construct item %s "%s"\n' "$indent" "$item_counter" "$item_scope"
+      printf '%s construct cat __sel 5\n' "$indent"
+      printf '%s construct item %s "%s"\n' "$indent" "$item_counter" "$item_snapshot_id"
+
+      ## for each playlist
+      item_playlist="${lists#*?collaborative?:}"; item_playlist="${item_playlist%%,?type?:?playlist?,?uri?:*}"
+      lists="${lists#*"$item_playlist"}"
+      ##
+      : $((item_counter+=1))
+    done
+    ##
+  printf '}\n'
+}
+# ^ TODO: this can only fetch the first 50 playlists
+pl() { # playlist loop || show
+  len="$(length "$1")"
+  [ ! "$len" -eq "$len" ] && {
+    printf 'Failed to get length of %s... Bailing out...\n' "$1"
+    exit 1
+  }
+  n=0; while [ "$n" -le "$len" ]; do
+    curl -sL -X "GET" -H "Accept: application/json" -H "Content-Type: application/json" -H "Authorization: Bearer $AUTHKEY" "https://api.spotify.com/v1/playlists/$1/tracks?fields=items(track(name%2Curi))&limit=100&offset=${n:-0}" | jq '.[] | .[].track | .name + " - " + .uri + " "' -r | sed '/ -  /d' # + " " is for sed; if 2 spaces after - then uri was missing; so delete
+    : $((n+=100))
+  done
+}
+pl_new() {
+  len="$(length "$1")"
+  [ ! "$len" -eq "$len" ] && {
+    printf 'Failed to get length of %s... Bailing out...\n' "$1"
+    exit 1
+  }
+  n=0; while [ "$n" -le "$len" ]; do
+    input="$(
+      curl -sL -X "GET" -H "Accept: application/json" -H "Content-Type: application/json" -H "Authorization: Bearer $AUTHKEY" "https://api.spotify.com/v1/playlists/$1/tracks?fields=items(track(name%2Curi))&limit=100&offset=${n:-0}"
+    )"
+    while [ -n "$input" ]; do 
+      input="${input#*?track?:??name???}"; title="${input%%?,?uri?*}"; uri="${input#*?uri???}"; uri="${uri%%\"\}\},\{\"*}"
+      [ "${uri%\}\}\]\}}" != "$uri" ] && input=""
+      printf 'Track: %s || URI: %s\n' "$title" "$uri"
+    done
+    : $((n+=100))
+  done
+}
+pa() { # add func
+  IFS=", "; for i in ${1}; do
+    printf 'Adding %s to %s\n' "$i" "$1" 
+    curl -sL -X "POST" -H "Content-Type: application/json" -H "Authorization: Bearer $AUTHKEY" --data "{ \"uris\": [ \"$i\" ], \"position\": 0 }" --url "https://api.spotify.com/v1/playlists/${1}/tracks" | jq -M || printf 'failed to add %s\n' "$i"
+  done
+}
+pd() { # del func
+  IFS=", "; for i in ${1}; do
+    printf 'Removing %s from %s\n' "$i" "$1"
+    curl -sL -X "DELETE" -H "Authorization: Bearer $AUTHKEY" -H "Content-Type: application/json" --data "{ \"tracks\": [ { \"uri\": \"$i\" } ], \"snapshot_id\": \"${3:-string}\" }" --url "https://api.spotify.com/v1/playlists/${2}/tracks"
+  done
+}
+pg() { # get func -- for snapshot id -- raw
+  curl -sL -X "GET" -H "Accept: application/json" -H "Content-Type: application/json" -H "Authorization: Bearer $AUTHKEY" --url "https://api.spotify.com/v1/playlists/$1" | jq
+}
+case "$1" in
+  get) if [ -n "$2" ]; then pg "$2"; else exit 1; fi;;
+  list|ls|show) if [ -n "$2" ]; then pl_new "$2"; else playlists; fi;;
+  add) if [ -n "$2" ]; then pa "$2" "$3"; else exit 1; fi;;
+  del) if [ -n "$2" ]; then pd "$2" "$3" "$3"; else exit 1; fi;;
+  *) help ;;
+esac

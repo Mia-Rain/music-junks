@@ -20,7 +20,7 @@ R=$(curl -X "GET" "https://api.spotify.com/v1/me/tracks" -H "Accept: application
 }
 length="${RETURN##*?total????}"; length="${length%??}" # ?? should remove closing } and NL
 offset=0
-TRACK_NUM=0
+TRACK_NUM=1
 until [ $offset -ge $length ]; do
   RETURN=$(curl -sL -X "GET" -H "Accept: application/json" -H "Content-Type: application/json" -H "Authorization: Bearer $AUTHKEY" "https://api.spotify.com/v1/me/tracks?limit=50&offset=${offset}")
   n=0; until [ $n -ge 50 ]; do
@@ -50,8 +50,7 @@ EOF
     RETURN="${RETURN#*?id\"????}"; TRACK_ID="${RETURN%%\",*}" # get track id
     RETURN="${RETURN#*?name?????}" # move to track name
     TRACK_NAME="${RETURN%%\",*}"
-    #printf 'Track #%s: %s - %s | Album: %s - %s | Artists: %s\n' "$TRACK_NUM" "$TRACK_NAME" "$TRACK_ID" "$ALBUM_NAME" "$ALBUM_ID" "$ARTISTS"
-    printf 'Album: %s\nArtist: %s\nTrack: %s\n\n' "$ALBUM_NAME" "$ARTISTS" "$TRACK_NAME"
+    printf 'Track #%s: %s - %s | Album: %s - %s | Artists: %s\n' "$TRACK_NUM" "$TRACK_NAME" "$TRACK_ID" "$ALBUM_NAME" "$ALBUM_ID" "$ARTISTS"
     #echo "$TRACK_NUM | $TRACK_NAME | $offset"
     RETURN="${RETURN#*\},?\{}" # finish current track
     : $((n+=1))
