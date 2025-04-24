@@ -23,7 +23,7 @@ offset=0
 TRACK_NUM=0
 until [ $offset -ge $length ]; do
   RETURN=$(curl -sL -X "GET" -H "Accept: application/json" -H "Content-Type: application/json" -H "Authorization: Bearer $AUTHKEY" "https://api.spotify.com/v1/me/tracks?limit=50&offset=${offset}")
-  n=0; until [ $n -ge 50 ]; do
+  n=0; while [ $n -lt 50 ]; do
     RETURN="${RETURN#*?track????\{}" # remove all data before track element
     # handle the album as it appears first
     RETURN="${RETURN#*?\],}" # remove all data within the album artists array
@@ -35,6 +35,7 @@ until [ $offset -ge $length ]; do
     # artists are held in an array, we only need each name
     # trying to decide when the array ends is complex
     RETURN="${RETURN#*\},?}"; unset ARTISTS # move to artist block
+    printf 1
     until [ "$p" = "]," ]; do
       RETURN="${RETURN#*?name?????}" # remove everything before the name data
       ARTISTS="${ARTISTS+${ARTISTS}, }${RETURN%%\",*}"; # store name data

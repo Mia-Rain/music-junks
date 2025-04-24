@@ -1,0 +1,8 @@
+[submodule "flac_dump_sh"]
+	path = flac_dump_sh
+	url = https://github.com/Mia-Rain/ext-data-sh
+	branch = flac_dump_v1
+[submodule "music-scripts-ytmdl"]
+	path = music-scripts-ytmdl
+	url = https://github.com/Mia-Rain/music-scripts-ytmdl
+	branch = switch

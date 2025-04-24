@@ -3,6 +3,11 @@ music-junks
 -- random junk for music management
 ---- streaming apis, collection scripts, discovery tools, etc
 ---
+submods
+-- please update submods with `git submodule update --init --recursive`
+---- as the submods contain nested submods
+-- or clone with `--recursive --recurse-submodules`  
+---
 
 ---
 licensing

@@ -1,0 +1,45 @@
+#!/bin/sh
+MPD_DIR="/home/mia/Music"
+# $1 = playlist
+[ ! "$1" ] && exit 1
+_spotify_list="$(./spotbash playlist show $1)"
+while read -r line || [ "$line" ]; do
+  _spot_title="${line%% - spotify:track:*}"
+  a_spot_title="${_spot_title% - *}"; b_spot_title="${_spot_title#* - }"
+  [ "$a_spot_title" != "$_spot_title" ] &&_spot_title="${a_spot_title} ${b_spot_title}"
+  _spot_title="${_spot_title%?feat.*}"; #_spot_title="${_spot_title%&*}"
+  # expiremental changes to rip out extras
+  ## such as remix, cover, feat, and with
+  _spot_id="${line##* - spotify:track:}"
+  _spot_track_raw="$(./spotbash track_info "$_spot_id")"
+  _spot_dur="${_spot_track_raw#*duration_ms?:}"; _spot_dur="${_spot_dur%,?explicit*}"
+  # dur is in ms
+  _spot_artist="${_spot_track_raw#*artists}"; _spot_artist="${_spot_artist#*name?:}"; _spot_artist="${_spot_artist%%?,?type?*}"; _spot_artist="${_spot_artist#\"}"
+  ##
+  _b="${_spot_title#*\'}"; _b="${_b#\\}"; until [ "${_b#\'}" = "$_b" ]; do _b="${_b#\'}"; done
+  _a="${_spot_title%\'*}"; _a="${_a%\\}"; until [ "${_a%\'}" = "$_a" ]; do _a="${_a%\'}"; a="${_a%\\}" ; done
+  [ "$a" != "$b" ] &&_spot_title="${_a}${_b}"
+  ## this is remove backslashes and single qoutes as the api mangles them
+  _spot_album="${_spot_track_raw#*,?images?:}"; _spot_album="${_spot_album#*name?:?}"; _spot_album="${_spot_album%%?,?release_date?*}"
+  out="Track: $_spot_title
+By: $_spot_artist
+On: $_spot_album
+Id: $_spot_id
+Duration (ms): $_spot_dur
+---
+"
+  match="$(mpc search album "${_spot_album}")"
+  echo "Title from spotify: $_spot_title"
+  echo "Mpc search (searched for $_spot_album):
+${match:-Track not present locally}"
+  echo '---'
+  [ "${match:-Track not present locally}" = "Track not present locally" ] &&{
+    echo "Search for the following on lucida:
+$_spot_title $_spot_artist"
+    echo '---'
+    echo "$out"
+  }
+  # should try to match artist and duration as title can often differ
+done << EOF
+$_spotify_list
+EOF
